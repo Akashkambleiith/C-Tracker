@@ -1,3 +1,7 @@
+--find-links https://download.pytorch.org/whl/torch_stable.html
+--find-links https://download.pytorch.org/whl/cu90/torch_stable.html
+torch==0.4.1.post2
+torchvision==0.2.2.post3
 scipy==1.2.1 
 matplotlib==3.0.3
 Pillow==8.2.0
@@ -7,5 +11,4 @@ easydict==1.9
 opencv-python==4.1.0.25
 numpy==1.16.3 
 scikit-image==0.15.0  
-torchvision==0.2.2.post3
 pandas==0.24.2
