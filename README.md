@@ -14,9 +14,12 @@ Submitted by following as part of AI5100 course:
 - Akash Kamble
 - Gaurav Kumar
 
+
+```BibTeX
 @inproceedings{peng2020ctracker,
   title={Chained-Tracker: Chaining Paired Attentive Regression Results for End-to-End Joint Multiple-Object Detection and Tracking},
   author={Peng, Jinlong and Wang, Changan and Wan, Fangbin and Wu, Yang and Wang, Yabiao and Tai, Ying and Wang, Chengjie and Li, Jilin and Huang, Feiyue and Fu, Yanwei},
   booktitle={Proceedings of the European Conference on Computer Vision},
   year={2020},
 }
+```
