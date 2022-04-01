@@ -3,7 +3,7 @@ systems either follow the tracking-by-detection paradigm,
 in which object detection, feature extraction, and data association are all performed separately, or combine two of
 the three phases.In this paper, the authors proposed an end-to-end online MOT model, that takes two adjacent frames as its input,
 combining the object detection, feature representation, and
-data association into a simple paired bounding boxes regression problem. An joint attention module is introduced to
+data association into a simple paired bounding boxes regression problem. A joint attention module is introduced to
 highlight informative regions for the paired bounding boxes
 regression. State-of-the-art performances have been obtained on the most widely used public benchmark datasets.
 
