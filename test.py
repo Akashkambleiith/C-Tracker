@@ -310,8 +310,8 @@ def main(args=None):
 
 	retinanet.eval()
 
-	for seq_num in [2, 4, 5, 9, 10, 11, 13]:
-		run_each_dataset(parser.model_dir, retinanet, parser.dataset_path, 'train', 'MOT17-{:02d}'.format(seq_num))
+# 	for seq_num in [2, 4, 5, 9, 10, 11, 13]:
+# 		run_each_dataset(parser.model_dir, retinanet, parser.dataset_path, 'train', 'MOT17-{:02d}'.format(seq_num))
 	for seq_num in [1, 3, 6, 7, 8, 12, 14]:
 		run_each_dataset(parser.model_dir, retinanet, parser.dataset_path, 'test', 'MOT17-{:02d}'.format(seq_num))
 
