@@ -131,22 +131,22 @@ def draw_caption(image, box, caption, color):
 	cv2.putText(image, caption, (b[0], b[1] - 8), cv2.FONT_HERSHEY_PLAIN, 2, color, 2)
 
 
-def run_each_dataset(model_dir, retinanet, dataset_path, subset, cur_dataset):	
+def run_each_dataset(model_dir, retinanet, dataset_path, subset, cur_dataset, img_len, det_list_all, tracklet_all):	
 	print(cur_dataset)
 
 	img_list = os.listdir(os.path.join(dataset_path, subset, cur_dataset, 'img1'))
 	img_list = [os.path.join(dataset_path, subset, cur_dataset, 'img1', _) for _ in img_list if ('jpg' in _) or ('png' in _)]
 	img_list = sorted(img_list)
 
-	img_len = len(img_list)
+# 	img_len = len(img_list)
 	last_feat = None
 
 	confidence_threshold = 0.4
 	IOU_threshold = 0.5
 	retention_threshold = 10
 
-	det_list_all = []
-	tracklet_all = []
+	# det_list_all = []
+	# tracklet_all = []
 	max_id = 0
 	max_draw_len = 100
 	draw_interval = 5
@@ -261,11 +261,11 @@ def run_each_dataset(model_dir, retinanet, dataset_path, subset, cur_dataset):
 			trace_len = len(id_dict[str(trace_id)])
 			trace_len_draw = min(max_draw_len, trace_len)
 			
-			for k in range(trace_len_draw - draw_interval):
-				if(k % draw_interval == 0):
-					draw_point1 = id_dict[str(trace_id)][trace_len - k - 1]
-					draw_point2 = id_dict[str(trace_id)][trace_len - k - 1 - draw_interval]
-					cv2.line(img, draw_point1, draw_point2, color=color_list[trace_id % len(color_list)], thickness=2)
+			# for k in range(trace_len_draw - draw_interval):
+			# 	if(k % draw_interval == 0):
+			# 		draw_point1 = id_dict[str(trace_id)][trace_len - k - 1]
+			# 		draw_point2 = id_dict[str(trace_id)][trace_len - k - 1 - draw_interval]
+			# 		cv2.line(img, draw_point1, draw_point2, color=color_list[trace_id % len(color_list)], thickness=2)
 
 			fout_tracking.write(str(i+1) + ',' + str(trace_id) + ',' + str(x1) + ',' + str(y1) + ',' + str(x2 - x1) + ',' + str(y2 - y1) + ',-1,-1,-1,-1\n')
 
@@ -296,8 +296,10 @@ def main(args=None):
 	parser = argparse.ArgumentParser(description='Simple script for testing a CTracker network.')
 	parser.add_argument('--dataset_path', default='/dockerdata/home/jeromepeng/data/MOT/MOT17/', type=str, help='Dataset path, location of the images sequence.')
 	parser.add_argument('--model_dir', default='./trained_model/', help='Path to model (.pt) file.')
-
+	# parser.add_argument('--cur_dataset')	
 	parser = parser.parse_args(args)
+
+	model_dir = parser.model_dir
 
 	if not os.path.exists(os.path.join(parser.model_dir, 'results')):
 		os.makedirs(os.path.join(parser.model_dir, 'results'))
@@ -312,8 +314,147 @@ def main(args=None):
 
 # 	for seq_num in [2, 4, 5, 9, 10, 11, 13]:
 # 		run_each_dataset(parser.model_dir, retinanet, parser.dataset_path, 'train', 'MOT17-{:02d}'.format(seq_num))
-	for seq_num in [1, 3, 6, 7, 8, 12, 14]:
-		run_each_dataset(parser.model_dir, retinanet, parser.dataset_path, 'test', 'MOT17-{:02d}'.format(seq_num))
+# 	for seq_num in [1, 3, 6, 7, 8, 12, 14]:
+# 		run_each_dataset(parser.model_dir, retinanet, parser.dataset_path, 'test', 'MOT17-{:02d}'.format(seq_num))
+
+	
+
+	cap = cv2.VideoCapture(0)
+	i = 0
+    
+	while(cap.isOpened()):
+		ret, frame = cap.read()
+         
+        # This condition prevents from infinite looping
+        # incase video ends.
+		if ret == False:
+			break
+         
+        # Save Frame by Frame into disk using imwrite method
+		if i >= 10:
+            # run_each_dataset(parser.model_dir, retinanet, parser.dataset_path, 'test', 'MOT17-{:02d}'.format(seq_num), i)
+			confidence_threshold = 0.4
+			IOU_threshold = 0.5
+			retention_threshold = 10
+
+			det_list_all = []
+			tracklet_all = []
+			max_id = 0
+			max_draw_len = 100
+			draw_interval = 5
+			img_width = 1920
+			img_height = 1080
+			fps = 30
+
+			out_video = os.path.join(parser.model_dir, 'results_dl',  + '.mp4')
+			videoWriter = cv2.VideoWriter(out_video, cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), fps, (img_width, img_height))
+			
+
+			with torch.no_grad():
+				# data_path1 = img_list[min(idx, img_len - 1)]
+				# img_origin1 = skimage.io.imread(data_path1)
+				img_h, img_w, _ = frame.shape
+				img_height, img_width = img_h, img_w
+				resize_h, resize_w = math.ceil(img_h / 32) * 32, math.ceil(img_w / 32) * 32
+				img1 = np.zeros((resize_h, resize_w, 3), dtype=frame.dtype)
+				img1[:img_h, :img_w, :] = frame
+				img1 = (img1.astype(np.float32) / 255.0 - np.array([[RGB_MEAN]])) / np.array([[RGB_STD]])
+				img1 = torch.from_numpy(img1).permute(2, 0, 1).view(1, 3, resize_h, resize_w)
+
+			scores, transformed_anchors, last_feat = retinanet(img1.cuda().float(), last_feat=last_feat)
+			idxs = np.where(scores>0.1)
+
+			for j in range(idxs[0].shape[0]):
+				bbox = transformed_anchors[idxs[0][j], :]
+				x1 = int(bbox[0])
+				y1 = int(bbox[1])
+				x2 = int(bbox[2])
+				y2 = int(bbox[3])
+
+				x3 = int(bbox[4])
+				y3 = int(bbox[5])
+				x4 = int(bbox[6])
+				y4 = int(bbox[7])
+
+				det_conf = float(scores[idxs[0][j]])
+
+				det_rect = detect_rect()
+				# det_rect.curr_frame = idx
+				det_rect.curr_frame = i+1
+				det_rect.curr_rect = np.array([x1, y1, x2, y2])
+				det_rect.next_rect = np.array([x3, y3, x4, y4])
+				det_rect.conf = det_conf
+
+				if det_rect.conf > confidence_threshold:
+					det_list_all[det_rect.curr_frame - 1].append(det_rect)
+
+
+			matches, unmatched1, unmatched2 = track_det_match(tracklet_all, det_list_all[i], IOU_threshold)
+
+			for j in range(len(matches)):
+				det_list_all[i][matches[j][1]].id = tracklet_all[matches[j][0]].id
+				det_list_all[i][matches[j][1]].id = tracklet_all[matches[j][0]].id
+				tracklet_all[matches[j][0]].add_rect(det_list_all[i][matches[j][1]])
+
+			delete_track_list = []
+			for j in range(len(unmatched1)):
+				tracklet_all[unmatched1[j]].no_match_frame = tracklet_all[unmatched1[j]].no_match_frame + 1
+				if(tracklet_all[unmatched1[j]].no_match_frame >= retention_threshold):
+					delete_track_list.append(unmatched1[j])
+
+			origin_index = set([k for k in range(len(tracklet_all))])
+			delete_index = set(delete_track_list)
+			left_index = list(origin_index - delete_index)
+			tracklet_all = [tracklet_all[k] for k in left_index]
+
+
+			for j in range(len(unmatched2)):
+				det_list_all[i][unmatched2[j]].id = max_id + 1
+				max_id = max_id + 1
+				track = tracklet(det_list_all[i][unmatched2[j]])
+				tracklet_all.append(track)
+
+
+			# Now appending the output frame with the video
+
+			# img = cv2.imread(img_list[i])
+			img = frame
+			fout_tracking = open(os.path.join(model_dir, 'results_dl', + '.txt'), 'w')
+
+			save_img_dir = os.path.join(model_dir, 'results_dl')
+			if not os.path.exists(save_img_dir):
+				os.makedirs(save_img_dir)
+
+			
+			id_dict = {}
+
+
+			for j in range(len(det_list_all[i])):
+
+				x1, y1, x2, y2 = det_list_all[i][j].curr_rect.astype(int)
+				trace_id = det_list_all[i][j].id
+
+				id_dict.setdefault(str(trace_id),[]).append((int((x1+x2)/2), y2))
+				draw_trace_id = str(trace_id)
+				draw_caption(img, (x1, y1, x2, y2), draw_trace_id, color=color_list[trace_id % len(color_list)])
+				cv2.rectangle(img, (x1, y1), (x2, y2), color=color_list[trace_id % len(color_list)], thickness=2)
+
+				trace_len = len(id_dict[str(trace_id)])
+				trace_len_draw = min(max_draw_len, trace_len)
+
+			cv2.imshow(img)
+			cv2.imwrite(os.path.join(save_img_dir, str(i + 1).zfill(6) + '.jpg'), img)
+			videoWriter.write(img)
+			cv2.waitKey(0)
+            
+		fout_tracking.close()
+		videoWriter.release()
+		save_img_dir = parser.dataset_path
+		cv2.imwrite(os.path.join(save_img_dir, str(i + 1).zfill(6) + '.jpg'), frame)
+		i += 1
+		
+	cap.release()
+	cv2.destroyAllWindows()
 
 if __name__ == '__main__':
 	main()
